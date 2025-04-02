@@ -6,7 +6,7 @@ namespace DemoApi.Controllers
 {
     [ApiController]
     [Route("api/[Controller]")]
-    public class TracksController
+    public class TracksController : ControllerBase
     {
         [HttpGet(Name = "{id}")]
         public async Task<Track> GetTrackById(int id)
@@ -15,5 +15,14 @@ namespace DemoApi.Controllers
             var tracks = await repository.GetById(id);
             return tracks;
         }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<PagedResponse<Track>>> SearchTracks([FromQuery] TrackFilters filters)
+        {
+            var repository = new TracksRepository();
+            var result = await repository.SearchTracksAsync(filters);
+            return Ok(result);
+        }     
+       
     }
 }
