@@ -15,6 +15,14 @@ namespace DemoApi.Controllers
             var genres = await repository.GetAsync();
             return Ok(genres);
         }
+
+        [HttpGet("summary")]
+        public async Task<ActionResult<IEnumerable<GenreSummary>>> GetSummary()
+        {
+            var repository = new GenresRepository(); 
+            var summary = await repository.GetSongCountsPerGenreAsync(); 
+            return Ok(summary);
+        }
     }
 
 }

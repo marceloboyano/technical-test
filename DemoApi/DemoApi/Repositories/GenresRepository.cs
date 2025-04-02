@@ -14,5 +14,16 @@ namespace DemoApi.Repositories
             var genres = (await connection.QueryAsync<Genre>(query)).AsList();
             return genres;
         }
+
+        public async Task<IEnumerable<GenreSummary>> GetSongCountsPerGenreAsync()
+        {
+            var query = @"
+            SELECT g.GenreId, g.Name, COUNT(t.TrackId) AS SongCount
+            FROM genres g
+            LEFT JOIN tracks t ON g.GenreId = t.GenreId
+            GROUP BY g.GenreId, g.Name";
+            using var connection = new SqliteConnection(@"Data Source=Assets\chinook.db");
+            return await connection.QueryAsync<GenreSummary>(query);
+        }
     }
 }
