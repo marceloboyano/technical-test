@@ -1,18 +1,22 @@
 ﻿using Dapper;
 using DemoApi.Models;
+using DemoApi.Repositories.Interfaces;
 using Microsoft.Data.Sqlite;
+using System.Data;
 
 namespace DemoApi.Repositories
 {
-    public class ArtistsRepository
+    public class ArtistsRepository: BaseRepository<Artist>, IArtistsRepository
     {
-        public async Task<IEnumerable<Artist>> GetAsync()
-        {
-            var query = "SELECT ArtistId, Name FROM artists ORDER BY Name ASC;";
-            using var connection = new SqliteConnection(@"Data Source=Assets\chinook.db");
-            await connection.OpenAsync();
-            var artists = (await connection.QueryAsync<Artist>(query)).AsList();
-            return artists;
-        }
+        public ArtistsRepository(IDbConnection connection) : base(connection) { }
+        protected override string TableName => "artists";
+        protected override string AllColumns => "ArtistId, Name";
+        protected override string InsertColumns => "ArtistId,Name";
+        protected override string InsertValues => "@ArtistId, @Name";
+        protected override string UpdateSetClause => "ArtistId = @ArtistId, Name = @Name";
+        protected override string IdColumn => "ArtistId";
+
+
+
     }
 }

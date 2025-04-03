@@ -1,4 +1,4 @@
-﻿namespace DemoApi.Models
+﻿namespace DemoApi.DTOs.Requests
 {
     public class TrackFilters : PaginationParams
     {

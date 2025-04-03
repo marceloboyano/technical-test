@@ -1,24 +1,36 @@
 ﻿using Dapper;
+using DemoApi.DTOs.Requests;
+using DemoApi.DTOs.Responses;
 using DemoApi.Models;
-using DemoApi.Models.DTOs;
+using DemoApi.Repositories.Interfaces;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Caching.Memory;
+using System.Data;
+using System.Diagnostics;
 
 namespace DemoApi.Repositories
 {
-    public class TracksRepository
+    public class TracksRepository : BaseRepository<Track>, ITracksRepository
     {
-        private static readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
-        public async Task<Track?> GetById(int trackId)
+        private readonly IMemoryCache _cache;
+        public TracksRepository(IDbConnection connection, IMemoryCache cache) : base(connection)
         {
-            var query = "SELECT * FROM tracks WHERE TrackId = @Trackid";
-            using var connection = new SqliteConnection(@"Data Source=Assets\chinook.db");
-            await connection.OpenAsync();
-            var track = await connection.QueryAsync<Track>(query, new { Trackid = trackId });
-            return track.SingleOrDefault();
+            _cache = cache;
         }
+        protected override string TableName => "tracks";
+        protected override string AllColumns => "TrackId, Name, AlbumId, MediaTypeId, GenreId, Composer, Milliseconds, Bytes, UnitPrice";
+        protected override string InsertColumns => "Name, AlbumId, MediaTypeId, GenreId, Composer, Milliseconds, Bytes, UnitPrice";
+        protected override string InsertValues => "@Name, @AlbumId, @MediaTypeId, @GenreId, @Composer, @Milliseconds, @Bytes, @UnitPrice";
+        protected override string UpdateSetClause => "Name = @Name, AlbumId = @AlbumId, MediaTypeId = @MediaTypeId, GenreId = @GenreId, " +
+                                                  "Composer = @Composer, Milliseconds = @Milliseconds, Bytes = @Bytes, UnitPrice = @UnitPrice";
+        protected override string IdColumn => "TrackId";
 
-        public async Task<PagedResponse<TrackSearchResultDto>> SearchTracksAsync(TrackFilters filters)
+        /// <summary>
+        /// Searches tracks based on specified filters and returns paginated results with caching support.
+        /// </summary>
+        /// <param name="filters"></param>
+        /// <returns></returns>
+        public async Task<PagedResponse<TrackSearchResultDto>> SearchTracksAsync(TrackFilters filters,CancellationToken cancellationToken)
         {
             var cacheKey = $"tracks_{filters.GetHashCode()}";
             if (_cache.TryGetValue(cacheKey, out PagedResponse<TrackSearchResultDto> cachedResult))
@@ -48,7 +60,7 @@ namespace DemoApi.Repositories
                 LIMIT @PageSize OFFSET @Offset";
 
             using var connection = new SqliteConnection(@"Data Source=Assets\chinook.db");
-            await connection.OpenAsync();
+            await connection.OpenAsync(cancellationToken);
 
             var parameters = new
             {
@@ -60,9 +72,9 @@ namespace DemoApi.Repositories
                 Offset = (filters.PageNumber - 1) * filters.PageSize
             };
 
-            var results = await connection.QueryAsync<TrackSearchResultDto>(query, parameters);
+            var results = (await connection.QueryAsync<TrackSearchResultDto>(query, parameters)).AsList() ?? [];
 
-            var totalCount = results.FirstOrDefault()?.TotalCount ?? 0;
+            var totalCount = results.Count > 0 ? results[0].TotalCount : 0;
             var pagedResult = new PagedResponse<TrackSearchResultDto>(
                 results,
                 totalCount,
@@ -70,7 +82,11 @@ namespace DemoApi.Repositories
                 filters.PageSize
             );
 
-            _cache.Set(cacheKey, pagedResult, TimeSpan.FromMinutes(10));
+            var cacheOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromMinutes(10))
+            .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+
+            _cache.Set(cacheKey, pagedResult, cacheOptions);
             return pagedResult;
         }
 

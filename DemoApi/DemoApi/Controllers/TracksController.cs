@@ -1,5 +1,6 @@
-﻿using DemoApi.Models;
-using DemoApi.Repositories;
+﻿using DemoApi.DTOs.Requests;
+using DemoApi.DTOs.Responses;
+using DemoApi.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DemoApi.Controllers
@@ -8,20 +9,52 @@ namespace DemoApi.Controllers
     [Route("api/[Controller]")]
     public class TracksController : ControllerBase
     {
-        [HttpGet(Name = "{id}")]
-        public async Task<Track> GetTrackById(int id)
-        {
-            var repository = new TracksRepository();
-            var tracks = await repository.GetById(id);
-            return tracks;
-        }
+        private readonly ITracksService _tracksService;
 
-        [HttpGet("search")]
-        public async Task<ActionResult<PagedResponse<Track>>> SearchTracks([FromQuery] TrackFilters filters)
+        public TracksController(ITracksService tracksService)
         {
-            var repository = new TracksRepository();
-            var result = await repository.SearchTracksAsync(filters);
-            return Ok(result);
+            _tracksService = tracksService;
+        }
+        /// <summary>
+        /// Gets a specific track by its ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>Standard API response with track details</returns>
+        [HttpGet(Name = "{id}")]
+        [ProducesResponseType(typeof(ApiResponse<TrackResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<TrackResponseDto>> GetTrackById(int id)
+        {
+            var track = await _tracksService.GetTrackByIdAsync(id);
+
+            return track == null
+                ? NotFound(new ApiResponse<object>("Track not found", StatusCodes.Status404NotFound))
+                : Ok(new ApiResponse<TrackResponseDto>(track, $"Track {id} retrieved successfully"));
+
+        }
+        /// <summary>
+        /// Searches tracks with filtering and pagination
+        /// </summary>
+        /// <param name="filters"></param>
+        /// <returns>Paginated list of matching tracks</returns>
+        [HttpGet("search")]
+        public async Task<ActionResult<PagedResponse<TrackResponseDto>>> SearchTracks([FromQuery] TrackFilters filters)
+        {          
+            var result = await _tracksService.SearchTracksAsync(filters);
+            if (result == null || result.Data == null || !result.Data.Any())
+            {
+                return Ok(new ApiResponse<PagedResponse<TrackSearchResultDto>>(
+                    new PagedResponse<TrackSearchResultDto>(
+                        new List<TrackSearchResultDto>(),
+                        0,
+                        filters.PageNumber,
+                        filters.PageSize
+                    ),
+                    "No tracks found"
+                ));
+            }
+
+            return Ok(new ApiResponse<PagedResponse<TrackSearchResultDto>>(result));
         }     
        
     }

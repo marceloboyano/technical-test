@@ -1,6 +1,6 @@
-﻿namespace DemoApi.Models
+﻿namespace DemoApi.DTOs.Responses
 {
-    public class GenreSummary
+    public class GenreSummaryResponseDto
     {
         public int GenreId { get; set; }
         public required string Name { get; set; }
