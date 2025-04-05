@@ -5,6 +5,11 @@ namespace DemoApi.Repositories.Interfaces
 {
     public interface IGenresRepository: IGenericRepository<Genre>
     {
-        Task<IEnumerable<GenreSummaryResponseDto>> GetSongCountsPerGenreAsync();
+        /// <summary>
+        /// Retrieves a list of genres with their corresponding song counts, ordered by most songs to least.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task<IEnumerable<GenreSummaryResponseDto>> GetSongCountsPerGenreAsync(CancellationToken cancellationToken);
     }
 }

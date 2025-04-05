@@ -6,6 +6,12 @@ namespace DemoApi.Repositories.Interfaces
 {
     public interface ITracksRepository : IGenericRepository<Track>
     {
-        Task<PagedResponse<TrackSearchResultDto>> SearchTracksAsync(TrackFilters filters,CancellationToken cancellationToken);
+        /// <summary>
+        /// Searches tracks based on specified filters and returns paginated results with caching support.
+        /// </summary>
+        /// <param name="filters"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task<PagedResponse<TrackSearchResultDto>> SearchTracksAsync(TrackFilters filters, CancellationToken cancellationToken);
     }
 }

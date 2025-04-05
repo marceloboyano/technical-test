@@ -14,9 +14,9 @@ namespace DemoApi.Services.Implementations
             _repo = repo;
             _mapper = mapper;
         }
-        public async Task<IEnumerable<ArtistResponseDto>> GetAllArtistsAsync()
+        public async Task<IEnumerable<ArtistResponseDto>> GetAllArtistsAsync(CancellationToken cancellationToken)
         {
-            var artists = await _repo.GetAllAsync("Name ASC");
+            var artists = await _repo.GetAllAsync(cancellationToken);
             return _mapper.Map<IEnumerable<ArtistResponseDto>>(artists);
            
         }

@@ -21,9 +21,9 @@ namespace DemoApi.Controllers
         /// <returns>Standardized API response with list of artists</returns>
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<ArtistResponseDto>>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ArtistResponseDto>>>> GetAllArtists()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ArtistResponseDto>>>> GetAllArtists(CancellationToken cancellationToken)
         {
-            var artists = await _artistService.GetAllArtistsAsync();
+            var artists = await _artistService.GetAllArtistsAsync(cancellationToken);
             return Ok(new ApiResponse<IEnumerable<ArtistResponseDto>>(artists));
         }
     }

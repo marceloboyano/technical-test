@@ -12,7 +12,9 @@ namespace DemoApi.Repositories
         protected abstract string InsertColumns { get; }
         protected abstract string InsertValues { get; }
         protected abstract string UpdateSetClause { get; }
+        protected abstract string DefaultSortField { get; }
         protected virtual string IdColumn => $"{typeof(T).Name}Id";
+
 
 
 
@@ -21,65 +23,54 @@ namespace DemoApi.Repositories
             _connection = connection;
         }
 
-        /// <summary>
-        /// Retrieves all entities from the database with optional sorting
-        /// </summary>
-        /// <param name="orderBy"></param>
-        /// <returns>A collection of all entities, optionally sorted by the specified columns</returns>
-        public async Task<IEnumerable<T>> GetAllAsync(string? orderBy)
-        {
-            var orderClause = string.IsNullOrWhiteSpace(orderBy)
-                ? string.Empty
-                : $" ORDER BY {orderBy}";
 
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken)
+        {
             return await _connection.QueryAsync<T>(
-                $"SELECT {AllColumns} FROM {TableName}{orderClause}");
+                 new CommandDefinition(
+                     $"SELECT {AllColumns} FROM {TableName} ORDER BY {DefaultSortField} ASC",
+                     cancellationToken: cancellationToken));
         }
-        /// <summary>
-        /// Retrieves a single entity by its unique identifier
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns>The requested entity if found; otherwise, <c>null</c> if no entity matches the specified ID</returns>
-        public async Task<T?> GetByIdAsync(int id)
+
+        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken)
         {
             string sql = $"SELECT {AllColumns} FROM {TableName}  WHERE {IdColumn} = @id";
-            return await _connection.QueryFirstOrDefaultAsync<T>(sql, new { id });
+            return await _connection.QueryFirstOrDefaultAsync<T>(
+           new CommandDefinition(
+               sql,
+               new { id },
+               cancellationToken: cancellationToken));
         }
-        /// <summary>
-        /// Creates a new entity in the database
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns>The database-generated ID of the newly created entity</returns>
-        public async Task<int> CreateAsync(T entity)
+
+        public async Task<int> CreateAsync(T entity, CancellationToken cancellationToken)
         {
             var sql = $"INSERT INTO {TableName} ({InsertColumns}) VALUES ({InsertValues})";
-            return await _connection.ExecuteScalarAsync<int>(sql + "; SELECT LAST_INSERT_ID();", entity);
+            return await _connection.ExecuteScalarAsync<int>(
+               new CommandDefinition(
+                   sql + "; SELECT LAST_INSERT_ID();",
+                   entity,
+                   cancellationToken: cancellationToken));
         }
-        /// <summary>
-        /// Updates an existing entity in the database
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns><c>true</c> if the entity was found and updated successfully;
-        /// <c>false</c> if no entity with the specified ID exists
-        /// </returns>
-        public async Task<bool> UpdateAsync(T entity)
+
+        public async Task<bool> UpdateAsync(T entity, CancellationToken cancellationToken)
         {
             var sql = $"UPDATE {TableName} SET {UpdateSetClause} WHERE {IdColumn} = @{IdColumn}";
-            int affected = await _connection.ExecuteAsync(sql, entity);
+            int affected = await _connection.ExecuteAsync(
+               new CommandDefinition(
+                   sql,
+                   entity,
+                   cancellationToken: cancellationToken));
             return affected > 0;
         }
-        /// <summary>
-        /// Deletes an entity from the database by its primary key.
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns>
-        /// <c>true</c> if one or more rows were affected (entity was found and deleted);
-        /// <c>false</c> if no rows were affected (entity with specified ID doesn't exist).
-        /// </returns>
-        public async Task<bool> DeleteAsync(int id)
+
+        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
         {
             string sql = $"DELETE FROM {TableName} WHERE {IdColumn} = @id";
-            int affected = await _connection.ExecuteAsync(sql, new { id });
+            int affected = await _connection.ExecuteAsync(
+                 new CommandDefinition(
+                     sql,
+                     new { id },
+                     cancellationToken: cancellationToken));
             return affected > 0;
         }
     }

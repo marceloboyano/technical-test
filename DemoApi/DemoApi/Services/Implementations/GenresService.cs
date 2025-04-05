@@ -15,14 +15,14 @@ namespace DemoApi.Services.Implementations
             _repo = repo;
             _mapper = mapper;
         }
-        public async Task<IEnumerable<GenreResponseDto>> GetAllGenresAsync()
+        public async Task<IEnumerable<GenreResponseDto>> GetAllGenresAsync(CancellationToken cancellationToken)
         {
-            var genres = await _repo.GetAllAsync("Name ASC");
+            var genres = await _repo.GetAllAsync(cancellationToken);
             return _mapper.Map<IEnumerable<GenreResponseDto>>(genres);
         }
-        public async Task<IEnumerable<GenreSummaryResponseDto>> GetSongCountsPerGenreAsync()
+        public async Task<IEnumerable<GenreSummaryResponseDto>> GetSongCountsPerGenreAsync(CancellationToken cancellationToken)
         {
-            return await _repo.GetSongCountsPerGenreAsync();
+            return await _repo.GetSongCountsPerGenreAsync(cancellationToken);
         }
     }
 }

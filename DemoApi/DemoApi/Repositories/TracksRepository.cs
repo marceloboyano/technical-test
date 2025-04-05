@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Caching.Memory;
 using System.Data;
 using System.Diagnostics;
+using static DemoApi.Repositories.TracksRepository;
 
 namespace DemoApi.Repositories
 {
@@ -23,41 +24,33 @@ namespace DemoApi.Repositories
         protected override string InsertValues => "@Name, @AlbumId, @MediaTypeId, @GenreId, @Composer, @Milliseconds, @Bytes, @UnitPrice";
         protected override string UpdateSetClause => "Name = @Name, AlbumId = @AlbumId, MediaTypeId = @MediaTypeId, GenreId = @GenreId, " +
                                                   "Composer = @Composer, Milliseconds = @Milliseconds, Bytes = @Bytes, UnitPrice = @UnitPrice";
+        protected override string DefaultSortField => "Name";
         protected override string IdColumn => "TrackId";
 
-        /// <summary>
-        /// Searches tracks based on specified filters and returns paginated results with caching support.
-        /// </summary>
-        /// <param name="filters"></param>
-        /// <returns></returns>
-        public async Task<PagedResponse<TrackSearchResultDto>> SearchTracksAsync(TrackFilters filters,CancellationToken cancellationToken)
+        public async Task<PagedResponse<TrackSearchResultDto>> SearchTracksAsync(TrackFilters filters, CancellationToken cancellationToken)
         {
-            var cacheKey = $"tracks_{filters.GetHashCode()}";
-            if (_cache.TryGetValue(cacheKey, out PagedResponse<TrackSearchResultDto> cachedResult))
-                return cachedResult;
-
             var query = @"
-               SELECT
-                t.TrackId,
-                t.Name,
-                t.Composer,
-                t.Milliseconds AS DurationMs,
-                t.UnitPrice AS Price,
-                a.Title AS AlbumTitle,
-                ar.Name AS ArtistName,
-                g.Name AS GenreName,
-                COUNT(*) OVER() AS TotalCount
-               FROM tracks t
-                LEFT JOIN albums a ON t.AlbumId = a.AlbumId
-                LEFT JOIN artists ar ON a.ArtistId = ar.ArtistId
-                LEFT JOIN genres g ON t.GenreId = g.GenreId
-                WHERE 
-                    (@TrackName IS NULL OR t.Name LIKE '%' || @TrackName || '%')
-                    AND (@Artist IS NULL OR ar.Name LIKE '%' || @Artist || '%')
-                    AND (@Album IS NULL OR a.Title LIKE '%' || @Album || '%')
-                    AND (@Genre IS NULL OR g.Name LIKE '%' || @Genre || '%')
-                ORDER BY t.Name
-                LIMIT @PageSize OFFSET @Offset";
+           SELECT
+            t.TrackId,
+            t.Name,
+            t.Composer,
+            t.Milliseconds AS DurationMs,
+            t.UnitPrice AS Price,
+            a.Title AS AlbumTitle,
+            ar.Name AS ArtistName,
+            g.Name AS GenreName,
+            COUNT(*) OVER() AS TotalCount
+           FROM tracks t
+            LEFT JOIN albums a ON t.AlbumId = a.AlbumId
+            LEFT JOIN artists ar ON a.ArtistId = ar.ArtistId
+            LEFT JOIN genres g ON t.GenreId = g.GenreId
+            WHERE 
+                (@TrackName IS NULL OR t.Name LIKE '%' || @TrackName || '%')
+                AND (@Artist IS NULL OR ar.Name LIKE '%' || @Artist || '%')
+                AND (@Album IS NULL OR a.Title LIKE '%' || @Album || '%')
+                AND (@Genre IS NULL OR g.Name LIKE '%' || @Genre || '%')
+            ORDER BY t.Name
+            LIMIT @PageSize OFFSET @Offset";
 
             using var connection = new SqliteConnection(@"Data Source=Assets\chinook.db");
             await connection.OpenAsync(cancellationToken);
@@ -75,20 +68,14 @@ namespace DemoApi.Repositories
             var results = (await connection.QueryAsync<TrackSearchResultDto>(query, parameters)).AsList() ?? [];
 
             var totalCount = results.Count > 0 ? results[0].TotalCount : 0;
-            var pagedResult = new PagedResponse<TrackSearchResultDto>(
+            return new PagedResponse<TrackSearchResultDto>(
                 results,
                 totalCount,
                 filters.PageNumber,
                 filters.PageSize
             );
-
-            var cacheOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(TimeSpan.FromMinutes(10))
-            .SetAbsoluteExpiration(TimeSpan.FromHours(1));
-
-            _cache.Set(cacheKey, pagedResult, cacheOptions);
-            return pagedResult;
         }
-
     }
+
+
 }

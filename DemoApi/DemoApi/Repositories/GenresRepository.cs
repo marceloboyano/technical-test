@@ -16,13 +16,11 @@ namespace DemoApi.Repositories
         protected override string InsertColumns => "GenreId,Name";
         protected override string InsertValues => "@GenreId, @Name";
         protected override string UpdateSetClause => "GenreId = @GenreId, Name = @Name";
+        protected override string DefaultSortField => "Name";
         protected override string IdColumn => "GenreId";
 
-        /// <summary>
-        /// Retrieves a list of genres with their corresponding song counts, ordered by most songs to least.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<IEnumerable<GenreSummaryResponseDto>> GetSongCountsPerGenreAsync()
+       
+        public async Task<IEnumerable<GenreSummaryResponseDto>> GetSongCountsPerGenreAsync(CancellationToken cancellationToken)
         {
             var query = @"
             SELECT 

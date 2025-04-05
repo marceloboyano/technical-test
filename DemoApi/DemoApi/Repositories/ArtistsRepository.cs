@@ -14,9 +14,8 @@ namespace DemoApi.Repositories
         protected override string InsertColumns => "ArtistId,Name";
         protected override string InsertValues => "@ArtistId, @Name";
         protected override string UpdateSetClause => "ArtistId = @ArtistId, Name = @Name";
+        protected override string DefaultSortField => "Name";
         protected override string IdColumn => "ArtistId";
-
-
-
+       
     }
 }
